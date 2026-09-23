@@ -38,7 +38,8 @@ import Translation
 		)
 	}
 
-	func cachedTitle(for article: Article) -> String? {
+	/// The translated headline for an article, if one has been fetched.
+	func cachedHeadline(for article: Article) -> String? {
 		syncFingerprint()
 		guard TranslationSettings.isEnabled else {
 			return nil
@@ -55,18 +56,21 @@ import Translation
 			return
 		}
 
-		let pending = articles.filter { article in
-			guard let title = article.title, !title.isEmpty else {
-				return false
+		var headlines = [String: String]()
+		for article in articles {
+			guard cache[article.articleID] == nil, !inFlight.contains(article.articleID) else {
+				continue
 			}
-			return cache[article.articleID] == nil && !inFlight.contains(article.articleID)
+			if let headline = Self.headlineText(for: article) {
+				headlines[article.articleID] = headline
+			}
 		}
 
-		guard !pending.isEmpty else {
+		guard !headlines.isEmpty else {
 			return
 		}
 
-		let titles = Dictionary(uniqueKeysWithValues: pending.map { ($0.articleID, $0.title ?? "") })
+		let titles = headlines
 		for articleID in titles.keys {
 			inFlight.insert(articleID)
 		}
@@ -109,6 +113,16 @@ import Translation
 				completion([:])
 			}
 		}
+	}
+
+	/// What the timeline shows as an article's headline: its title, or its summary when
+	/// the post has no title.
+	private static func headlineText(for article: Article) -> String? {
+		if let title = article.title, !title.isEmpty {
+			return title
+		}
+		let summary = ArticleStringFormatter.shared.truncatedSummary(article)
+		return summary.isEmpty ? nil : summary
 	}
 
 	/// True when the translation preferences changed since the previous call, so the

@@ -154,8 +154,10 @@ private extension TimelineViewController {
 
 	/// An untitled article shows the start of its body instead, as the standard timeline does.
 	func columnTitleText(for article: Article) -> String {
-		let translatedTitle = TimelineTitleTranslator.shared.cachedTitle(for: article)
-		let title = translatedTitle ?? ArticleStringFormatter.shared.truncatedTitle(article)
+		if let translatedHeadline = TimelineTitleTranslator.shared.cachedHeadline(for: article) {
+			return translatedHeadline
+		}
+		let title = ArticleStringFormatter.shared.truncatedTitle(article)
 		if !title.isEmpty {
 			return title
 		}

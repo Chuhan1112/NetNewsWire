@@ -1024,7 +1024,7 @@ extension TimelineViewController: NSTableViewDelegate {
 			byline: article.byline(),
 			iconImage: iconImage,
 			showIcon: showIcons,
-			translatedTitle: TimelineTitleTranslator.shared.cachedTitle(for: article)
+			translatedHeadline: TimelineTitleTranslator.shared.cachedHeadline(for: article)
 		)
 	}
 

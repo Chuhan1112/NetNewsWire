@@ -26,26 +26,34 @@ import Images
 	let read: Bool
 	let starred: Bool
 
-	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, translatedTitle: String? = nil) {
+	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, translatedHeadline: String? = nil) {
 
-		// A translated title replaces the original in the timeline; the summary
-		// stays in the feed's language, since translating it would cost another
-		// request for text the cell may not even show.
-		let originalTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
-		if let translatedTitle {
+		// The headline is the title, or the summary for posts that have no title, which
+		// is how Micro.blog writes most of them. A translated headline replaces
+		// whichever of the two the cell actually shows.
+		let originalTitle = ArticleStringFormatter.shared.truncatedTitle(article)
+		let usesSummaryAsHeadline = originalTitle.isEmpty
+		let originalAttributedTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
+
+		if let translatedHeadline, usesSummaryAsHeadline {
+			self.title = ""
+			self.attributedTitle = originalAttributedTitle
+			self.text = translatedHeadline
+		} else if let translatedHeadline {
 			// Swap the characters but keep the original attributed runs: the title
 			// field sizer force-unwraps the font attribute at index 0, and the cell
 			// merges its base font into existing runs only, so a plain string with
 			// no font attribute crashes the layout.
-			let translated = NSMutableAttributedString(attributedString: originalTitle)
-			translated.replaceCharacters(in: NSRange(location: 0, length: originalTitle.length), with: translatedTitle)
+			let translated = NSMutableAttributedString(attributedString: originalAttributedTitle)
+			translated.replaceCharacters(in: NSRange(location: 0, length: originalAttributedTitle.length), with: translatedHeadline)
 			self.attributedTitle = translated
-			self.title = translatedTitle
+			self.title = translatedHeadline
+			self.text = Self.summaryText(for: article, title: self.title)
 		} else {
-			self.attributedTitle = originalTitle
-			self.title = ArticleStringFormatter.shared.truncatedTitle(article)
+			self.title = originalTitle
+			self.attributedTitle = originalAttributedTitle
+			self.text = Self.summaryText(for: article, title: self.title)
 		}
-		self.text = Self.summaryText(for: article, title: self.title)
 
 		self.dateString = ArticleStringFormatter.shared.dateString(article.logicalDatePublished)
 
