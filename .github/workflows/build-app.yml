@@ -81,7 +81,6 @@ jobs:
           tag_name: latest-build
           name: Latest build
           make_latest: true
-          prune: true
           files: ${{ runner.temp }}/NetNewsWire-macos.zip
           body: |
             Automatic build of `main` at ${{ github.sha }}.
