@@ -6,15 +6,23 @@
 import AppKit
 import SwiftUI
 
-final class TranslationPreferencesViewController: NSHostingController<TranslationPreferencesView> {
+final class TranslationPreferencesViewController: NSViewController {
 
 	convenience init() {
-		self.init(rootView: TranslationPreferencesView())
+		self.init(nibName: nil, bundle: nil)
 	}
 
-	override func viewDidLoad() {
-		super.viewDidLoad()
-		// The preferences window resizes itself to the view's frame, so give it a fixed size up front.
-		view.frame = NSRect(x: 0, y: 0, width: 512, height: 430)
+	override func loadView() {
+		// The preferences window resizes itself to the view's frame, so the hosting view
+		// needs a concrete frame. NSHostingController sizes its view from SwiftUI's ideal
+		// size, which a fixed-height layout reports as zero and collapsed the window.
+		let hostingView = NSHostingView(rootView: TranslationPreferencesView())
+		hostingView.frame = NSRect(
+			x: 0,
+			y: 0,
+			width: TranslationPreferencesView.viewWidth,
+			height: TranslationPreferencesView.viewHeight
+		)
+		view = hostingView
 	}
 }

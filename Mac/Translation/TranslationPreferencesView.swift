@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import Translation
 
 @MainActor final class TranslationPreferencesModel: ObservableObject {
 
@@ -89,43 +88,40 @@ struct TranslationPreferencesView: View {
 
 	@StateObject private var model = TranslationPreferencesModel()
 
-	private let width = CGFloat(512)
+	static let viewWidth = CGFloat(512)
+	static let viewHeight = CGFloat(330)
 
 	var body: some View {
 
-		Form {
-			Section {
-				Toggle(isOn: $model.isEnabled) {
-					Text("Enable translation")
-				}
-			}
+		VStack(alignment: .leading, spacing: 18) {
 
-			Section {
-				LabeledContent {
+			Toggle("Enable translation", isOn: $model.isEnabled)
+
+			VStack(alignment: .leading, spacing: 12) {
+
+				preferenceRow("Endpoint") {
 					TextField("http://127.0.0.1:18000/v1", text: $model.endpoint)
 						.textFieldStyle(.roundedBorder)
-				} label: {
-					Text("Endpoint")
+						.frame(maxWidth: 300)
 				}
 
-				LabeledContent {
+				preferenceRow("API key") {
 					SecureField("", text: $model.apiKey)
 						.textFieldStyle(.roundedBorder)
-				} label: {
-					Text("API key")
+						.frame(maxWidth: 300)
 				}
 
-				LabeledContent {
+				preferenceRow("Model") {
 					TextField("Hy-MT2-1.8B-4bit", text: $model.model)
 						.textFieldStyle(.roundedBorder)
-				} label: {
-					Text("Model")
+						.frame(maxWidth: 300)
 				}
 
-				LabeledContent {
+				preferenceRow("Target language") {
 					HStack(spacing: 6) {
 						TextField("Simplified Chinese", text: $model.targetLanguage)
 							.textFieldStyle(.roundedBorder)
+							.frame(maxWidth: 240)
 						Menu {
 							ForEach(TranslationPreferencesModel.languagePresets, id: \.self) { language in
 								Button(language) {
@@ -133,50 +129,55 @@ struct TranslationPreferencesView: View {
 								}
 							}
 						} label: {
-							Image(systemName: "chevron.down.circle")
+							Image(systemName: "chevron.up.chevron.down")
 						}
-						.menuStyle(.borderlessButton)
-						.frame(width: 22)
+						.fixedSize()
 					}
-				} label: {
-					Text("Target language")
 				}
 
-				LabeledContent {
+				preferenceRow("Batching") {
 					Stepper(value: $model.paragraphsPerRequest, in: 1...64) {
 						Text("\(model.paragraphsPerRequest) paragraphs per request")
 					}
-				} label: {
-					Text("Batching")
 				}
 			}
 			.disabled(!model.isEnabled)
 
-			Section {
-				HStack(alignment: .firstTextBaseline, spacing: 8) {
-					Button {
-						model.testConnection()
-					} label: {
-						Text("Test connection")
-					}
-					.disabled(!model.isEnabled || model.isTesting)
-
-					if model.isTesting {
-						ProgressView()
-							.controlSize(.small)
-					}
+			HStack(spacing: 8) {
+				Button("Test connection") {
+					model.testConnection()
 				}
+				.disabled(!model.isEnabled || model.isTesting)
 
-				if let statusMessage = model.statusMessage {
-					Text(statusMessage)
-						.font(.callout)
-						.foregroundStyle(model.statusIsError ? Color.red : Color.secondary)
-						.lineLimit(3)
+				if model.isTesting {
+					ProgressView()
+						.controlSize(.small)
 				}
 			}
 			.disabled(!model.isEnabled)
+
+			if let statusMessage = model.statusMessage {
+				Text(statusMessage)
+					.font(.callout)
+					.foregroundStyle(model.statusIsError ? Color.red : Color.secondary)
+					.lineLimit(3)
+					.frame(maxWidth: .infinity, alignment: .leading)
+			}
 		}
-		.formStyle(.grouped)
-		.frame(width: width, height: 430)
+		.padding(24)
+		.frame(
+			width: Self.viewWidth,
+			height: Self.viewHeight,
+			alignment: .topLeading
+		)
+	}
+
+	private func preferenceRow<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+		HStack(spacing: 10) {
+			Text(NSLocalizedString(label, comment: "Translation preference"))
+				.frame(width: 110, alignment: .trailing)
+			content()
+			Spacer(minLength: 0)
+		}
 	}
 }
