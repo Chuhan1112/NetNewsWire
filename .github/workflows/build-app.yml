@@ -1,0 +1,68 @@
+name: Build App
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    name: Build macOS app
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate Secrets Sources
+        run: PROJECT_DIR="$GITHUB_WORKSPACE" ./buildscripts/updateSecrets.sh
+
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Debug rather than Release: the project has a Release-only build phase that
+          # re-signs the Share Extension with ${EXPANDED_CODE_SIGN_IDENTITY}, which is
+          # empty under the no-signing config this job uses, so Release cannot complete
+          # in CI without a real signing identity.
+          xcodebuild \
+            -project NetNewsWire.xcodeproj \
+            -scheme NetNewsWire \
+            -configuration Debug \
+            -xcconfig .github/macos-ci-no-signing.xcconfig \
+            -destination "platform=macOS,arch=arm64" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            build
+
+      - name: Ad-hoc sign
+        run: |
+          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug/NetNewsWire.app"
+          # No certificate in CI, so ad-hoc sign: the app then launches with
+          # Gatekeeper's right-click Open instead of being rejected outright.
+          codesign --force --deep --sign - "$app" || echo "ad-hoc signing skipped"
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/DerivedData/Build/Products/Debug"
+          ditto -c -k --sequesterRsrc --keepParent NetNewsWire.app "$RUNNER_TEMP/NetNewsWire-macos.zip"
+          ls -lh "$RUNNER_TEMP/NetNewsWire-macos.zip"
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetNewsWire-macos
+          path: ${{ runner.temp }}/NetNewsWire-macos.zip
+          if-no-files-found: error
+          retention-days: 30
