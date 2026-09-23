@@ -11,6 +11,7 @@ import WebKit
 import RSCore
 import Articles
 import RSWeb
+import Translation
 
 enum DetailState: Equatable {
 	case noSelection
@@ -61,6 +62,11 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		}
 	}
 
+	private let translationController = ArticleTranslationController()
+	private var translatedArticle: ArticleTranslation?
+	private var translatedArticleID: String?
+	private var isTranslatingArticle = false
+
 	convenience init() {
 		self.init(nibName: "DetailView", bundle: nil)
 	}
@@ -77,6 +83,16 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 			detailStateForRegular = state
 		case .search:
 			detailStateForSearch = state
+		}
+
+		// A translation belongs to one article; drop it when the selection moves.
+		if articleID(for: state) != translatedArticleID {
+			translatedArticle = nil
+			translatedArticleID = nil
+			webViewController(for: mode).translatedArticle = nil
+			if !isTranslatingArticle {
+				statusBarView.statusText = nil
+			}
 		}
 	}
 
@@ -158,5 +174,123 @@ private extension DetailViewController {
 			}
 			return searchWebViewController!
 		}
+	}
+
+	// MARK: - Translation
+
+	var canTranslateArticle: Bool {
+		guard TranslationSettings.isEnabled else {
+			return false
+		}
+		return displayedArticle != nil
+	}
+
+	var isShowingTranslatedArticle: Bool {
+		translatedArticleID != nil
+	}
+
+	@objc func toggleArticleTranslation(_ sender: Any?) {
+
+		guard TranslationSettings.isEnabled, let article = displayedArticle else {
+			return
+		}
+
+		if translatedArticleID == article.articleID {
+			clearTranslation()
+			return
+		}
+
+		guard !isTranslatingArticle else {
+			return
+		}
+
+		let bodyHTML = displayedBodyHTML
+		guard !bodyHTML.isEmpty else {
+			return
+		}
+
+		isTranslatingArticle = true
+		statusBarView.statusText = NSLocalizedString("Translating…", comment: "Translating status")
+
+		let controller = translationController
+		let mode = currentSourceMode
+
+		Task { @MainActor in
+			do {
+				let translation = try await controller.translated(article, bodyHTML: bodyHTML)
+				translatedArticle = translation
+				translatedArticleID = article.articleID
+				webViewController(for: mode).translatedArticle = translation
+				statusBarView.statusText = nil
+			} catch {
+				statusBarView.statusText = nil
+				presentTranslationError(error)
+			}
+			isTranslatingArticle = false
+		}
+	}
+
+	private var currentDetailState: DetailState {
+		switch currentSourceMode {
+		case .regular:
+			return detailStateForRegular
+		case .search:
+			return detailStateForSearch
+		}
+	}
+
+	private var displayedArticle: Article? {
+		switch currentDetailState {
+		case .article(let article, _):
+			return article
+		case .extracted(let article, _, _):
+			return article
+		case .noSelection, .multipleSelection, .loading:
+			return nil
+		}
+	}
+
+	/// The same body HTML the renderer uses, so the model sees what the reader sees.
+	private var displayedBodyHTML: String {
+		switch currentDetailState {
+		case .article(let article, _):
+			return ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(article.body ?? "")
+		case .extracted(_, let extractedArticle, _):
+			return ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(extractedArticle.content ?? "")
+		case .noSelection, .multipleSelection, .loading:
+			return ""
+		}
+	}
+
+	private func articleID(for state: DetailState) -> String? {
+		switch state {
+		case .article(let article, _):
+			return article.articleID
+		case .extracted(let article, _, _):
+			return article.articleID
+		case .noSelection, .multipleSelection, .loading:
+			return nil
+		}
+	}
+
+	private func clearTranslation() {
+		translatedArticle = nil
+		translatedArticleID = nil
+		webViewController(for: currentSourceMode).translatedArticle = nil
+		statusBarView.statusText = nil
+	}
+
+	private func presentTranslationError(_ error: Error) {
+
+		guard let window = view.window else {
+			return
+		}
+
+		let alert = NSAlert()
+		alert.messageText = NSLocalizedString("Translation Failed", comment: "Translation Failed")
+		alert.informativeText = error.localizedDescription
+		alert.alertStyle = .warning
+		alert.addButton(withTitle: NSLocalizedString("OK", comment: "OK"))
+		alert.beginSheetModal(for: window)
 	}
 }

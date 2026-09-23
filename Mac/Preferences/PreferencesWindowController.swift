@@ -25,6 +25,7 @@ private struct ToolbarItemIdentifier {
 	static let General = "General"
 	static let Accounts = "Accounts"
 	static let Advanced = "Advanced"
+	static let Translation = "Translation"
 }
 
 final class PreferencesWindowController: NSWindowController, NSToolbarDelegate {
@@ -43,6 +44,11 @@ final class PreferencesWindowController: NSWindowController, NSToolbarDelegate {
 											 name: NSLocalizedString("Advanced", comment: "Preferences"),
 											 image: Assets.Images.preferencesToolbarAdvanced)]
 		return specs
+
+		let translationName = NSLocalizedString("Translation", comment: "Preferences")
+		specs += [PreferencesToolbarItemSpec(identifierRawValue: ToolbarItemIdentifier.Translation,
+											 name: translationName,
+											 image: NSImage(systemSymbolName: "translate", accessibilityDescription: translationName))]
 	}()
 
 	convenience init() {
@@ -164,6 +170,8 @@ private extension PreferencesWindowController {
 			viewController = AccountsPreferencesViewController()
 		case ToolbarItemIdentifier.Advanced:
 			viewController = AdvancedPreferencesViewController()
+		case ToolbarItemIdentifier.Translation:
+			viewController = TranslationPreferencesViewController()
 		default:
 			assertionFailure("Unknown preferences view controller: \(identifier)")
 			return nil

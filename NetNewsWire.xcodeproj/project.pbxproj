@@ -61,6 +61,7 @@
 		848E84D62DB749670023F3BA /* RSCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 848E84D42DB749670023F3BA /* RSCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		848E84D82DB749720023F3BA /* RSCore in Frameworks */ = {isa = PBXBuildFile; productRef = 848E84D72DB749720023F3BA /* RSCore */; };
 		848E84DF2DB749A40023F3BA /* RSCore in Frameworks */ = {isa = PBXBuildFile; productRef = 848E84DE2DB749A40023F3BA /* RSCore */; };
+		D1A7E100000000000000D005 /* Translation in Frameworks */ = {isa = PBXBuildFile; productRef = D1A7E100000000000000D004 /* Translation */; };
 		849182CC2FD32B1B005C3020 /* Appanoose.nnwtheme in Resources */ = {isa = PBXBuildFile; fileRef = 849182BB2FD32B1B005C3010 /* Appanoose.nnwtheme */; };
 		849182CC2FD32B1B005C3021 /* Biblioteca.nnwtheme in Resources */ = {isa = PBXBuildFile; fileRef = 849182BB2FD32B1B005C3011 /* Biblioteca.nnwtheme */; };
 		849182CC2FD32B1B005C3022 /* Hyperlegible.nnwtheme in Resources */ = {isa = PBXBuildFile; fileRef = 849182BB2FD32B1B005C3012 /* Hyperlegible.nnwtheme */; };
@@ -549,6 +550,7 @@
 				D1A7E100000000000000B005 /* ActivityLog in Frameworks */,
 				D1A7E100000000000000C005 /* Images in Frameworks */,
 				519CA8E525841DB700EB079A /* CrashReporter in Frameworks */,
+				D1A7E100000000000000D005 /* Translation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -825,6 +827,7 @@
 				848E84CF2DB749440023F3BA /* RSCoreResources */,
 				84EE3F112DB8A088009D3A8D /* RSTree */,
 				84EE43472DB8A441009D3A8D /* RSDatabase */,
+				D1A7E100000000000000D004 /* Translation */,
 			);
 			productName = NetNewsWire;
 			productReference = 849C64601ED37A5D003D8FC0 /* NetNewsWire.app */;
@@ -1666,6 +1669,10 @@
 		D1A7E100000000000000C007 /* Images */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Images;
+		};
+		D1A7E100000000000000D004 /* Translation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Translation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

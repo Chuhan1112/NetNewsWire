@@ -105,27 +105,30 @@ import Account
 		return formatter
 	}()
 
-	private init(article: Article?, extractedArticle: ExtractedArticle?, theme: ArticleTheme) {
+	private init(article: Article?, extractedArticle: ExtractedArticle?, theme: ArticleTheme, translatedTitle: String? = nil, translatedBodyHTML: String? = nil) {
 		self.article = article
 		self.extractedArticle = extractedArticle
 		self.articleTheme = theme
-		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
+
+		// A translated title has already been through a model, so it is sanitized the same way as the original.
+		self.title = ArticleStringFormatter.sanitizedTitle(translatedTitle ?? article?.title, forHTML: true) ?? ""
+
 		// Some feeds embed a full HTML document as the article content —
 		// render just the body fragment.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/3008>
 		if let content = extractedArticle?.content {
-			self.body = ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(content)
+			self.body = translatedBodyHTML ?? ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(content)
 			self.baseURL = extractedArticle?.url
 		} else {
-			self.body = ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(article?.body ?? "")
+			self.body = translatedBodyHTML ?? ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(article?.body ?? "")
 			self.baseURL = article?.baseURL?.absoluteString
 		}
 	}
 
 	// MARK: - API
 
-	static func articleHTML(article: Article, extractedArticle: ExtractedArticle? = nil, theme: ArticleTheme) -> Rendering {
-		let renderer = ArticleRenderer(article: article, extractedArticle: extractedArticle, theme: theme)
+	static func articleHTML(article: Article, extractedArticle: ExtractedArticle? = nil, theme: ArticleTheme, translatedTitle: String? = nil, translatedBodyHTML: String? = nil) -> Rendering {
+		let renderer = ArticleRenderer(article: article, extractedArticle: extractedArticle, theme: theme, translatedTitle: translatedTitle, translatedBodyHTML: translatedBodyHTML)
 		return (renderer.articleCSS, renderer.articleHTML, renderer.title, renderer.baseURL ?? "")
 	}
 

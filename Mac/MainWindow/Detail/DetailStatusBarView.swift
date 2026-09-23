@@ -19,6 +19,13 @@ final class DetailStatusBarView: NSView {
 		}
 	}
 
+	/// A message to show in place of the mouseover link, such as a translation status.
+	var statusText: String? {
+		didSet {
+			updateLinkForDisplay()
+		}
+	}
+
 	private var linkForDisplay: String? {
 		didSet {
 			needsLayout = true
@@ -65,6 +72,10 @@ final class DetailStatusBarView: NSView {
 private extension DetailStatusBarView {
 
 	func updateLinkForDisplay() {
+		if let statusText = statusText, !statusText.isEmpty {
+			linkForDisplay = statusText
+			return
+		}
 		if let mouseoverLink = mouseoverLink, !mouseoverLink.isEmpty {
 			linkForDisplay = mouseoverLink.strippingHTTPOrHTTPSScheme
 		} else {

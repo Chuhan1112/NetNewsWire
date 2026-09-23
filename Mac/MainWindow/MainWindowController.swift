@@ -256,6 +256,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 			return canCopyExternalURL()
 		}
 
+		if item.action == #selector(toggleArticleTranslation(_:)) {
+			return detailViewController?.canTranslateArticle ?? false
+		}
+
 		if item.action == #selector(openArticleInBrowser(_:)) {
 			if let item = item as? NSMenuItem, item.keyEquivalentModifierMask.contains(.shift) {
 				item.title = Browser.titleForOpenInBrowserInverted
@@ -383,6 +387,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 		}
 
 		URLPasteboardWriter.write(urlStrings: links, to: .general)
+	}
+
+	@objc func toggleArticleTranslation(_ sender: Any?) {
+		detailViewController?.toggleArticleTranslation(sender)
 	}
 
 	@IBAction func openArticleInBrowser(_ sender: Any?) {
@@ -865,6 +873,7 @@ extension NSToolbarItem.Identifier {
 	static let share = NSToolbarItem.Identifier("share")
 	static let articleThemeMenu = NSToolbarItem.Identifier("articleThemeMenu")
 	static let cleanUp = NSToolbarItem.Identifier("cleanUp")
+	static let translate = NSToolbarItem.Identifier("translate")
 }
 
 extension MainWindowController: NSToolbarDelegate {
@@ -963,6 +972,11 @@ extension MainWindowController: NSToolbarDelegate {
 			let title = NSLocalizedString("Clean Up", comment: "Clean Up button")
 			return buildToolbarButton(.cleanUp, title, Assets.Images.cleanUp, "cleanUp:")
 
+		case .translate:
+			let title = NSLocalizedString("Translate", comment: "Translate button")
+			let image = NSImage(systemSymbolName: "translate", accessibilityDescription: title) ?? Assets.Images.articleTheme
+			return buildToolbarButton(.translate, title, image, "toggleArticleTranslation:")
+
 		default:
 			break
 		}
@@ -988,7 +1002,8 @@ extension MainWindowController: NSToolbarDelegate {
 			.share,
 			.articleThemeMenu,
 			.search,
-			.cleanUp
+			.cleanUp,
+			.translate
 		]
 	}
 
@@ -1009,7 +1024,8 @@ extension MainWindowController: NSToolbarDelegate {
 			.share,
 			.openInBrowser,
 			.flexibleSpace,
-			.search
+			.search,
+			.translate
 		]
 	}
 

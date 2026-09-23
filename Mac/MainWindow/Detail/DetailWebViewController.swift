@@ -12,6 +12,7 @@ import os
 import RSCore
 import Articles
 import Images
+import Translation
 
 @MainActor protocol DetailWebViewControllerDelegate: AnyObject {
 	func mouseDidEnter(_: DetailWebViewController, link: String)
@@ -51,6 +52,16 @@ final class DetailWebViewController: NSViewController {
 			return article
 		default:
 			return nil
+		}
+	}
+
+	/// The translated form of the displayed article, or nil to show the original.
+	/// Only meaningful for the article currently in `state`.
+	var translatedArticle: ArticleTranslation? {
+		didSet {
+			if translatedArticle != oldValue {
+				reloadHTML()
+			}
 		}
 	}
 
@@ -378,10 +389,21 @@ private extension DetailWebViewController {
 			rendering = ArticleRenderer.loadingHTML(theme: theme)
 		case .article(let article, _):
 			detailIconSchemeHandler.currentArticle = article
-			rendering = ArticleRenderer.articleHTML(article: article, theme: theme)
+			rendering = ArticleRenderer.articleHTML(
+				article: article,
+				theme: theme,
+				translatedTitle: translatedArticle?.title,
+				translatedBodyHTML: translatedArticle?.bodyHTML
+			)
 		case .extracted(let article, let extractedArticle, _):
 			detailIconSchemeHandler.currentArticle = article
-			rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
+			rendering = ArticleRenderer.articleHTML(
+				article: article,
+				extractedArticle: extractedArticle,
+				theme: theme,
+				translatedTitle: translatedArticle?.title,
+				translatedBodyHTML: translatedArticle?.bodyHTML
+			)
 		}
 
 		let substitutions = [

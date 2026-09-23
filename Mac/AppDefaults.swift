@@ -44,6 +44,12 @@ final class AppDefaults: Sendable {
 		static let defaultBrowserID = "defaultBrowserID"
 		static let currentThemeName = "currentThemeName"
 		static let articleContentJavascriptEnabled = "articleContentJavascriptEnabled"
+		static let translationEnabled = "translationEnabled"
+		static let translationEndpoint = "translationEndpoint"
+		static let translationAPIKey = "translationAPIKey"
+		static let translationModel = "translationModel"
+		static let translationTargetLanguage = "translationTargetLanguage"
+		static let translationParagraphsPerRequest = "translationParagraphsPerRequest"
 
 		// Hidden prefs
 		static let showDebugMenu = "ShowDebugMenu"
@@ -219,6 +225,61 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setString(for: Key.currentThemeName, newValue)
+		}
+	}
+
+	var translationEnabled: Bool {
+		get {
+			return AppDefaults.bool(for: Key.translationEnabled)
+		}
+		set {
+			AppDefaults.setBool(for: Key.translationEnabled, newValue)
+		}
+	}
+
+	var translationEndpoint: String {
+		get {
+			return AppDefaults.string(for: Key.translationEndpoint) ?? "http://127.0.0.1:18000/v1"
+		}
+		set {
+			AppDefaults.setString(for: Key.translationEndpoint, newValue)
+		}
+	}
+
+	var translationAPIKey: String {
+		get {
+			return AppDefaults.string(for: Key.translationAPIKey) ?? ""
+		}
+		set {
+			AppDefaults.setString(for: Key.translationAPIKey, newValue)
+		}
+	}
+
+	var translationModel: String {
+		get {
+			return AppDefaults.string(for: Key.translationModel) ?? "Hy-MT2-1.8B-4bit"
+		}
+		set {
+			AppDefaults.setString(for: Key.translationModel, newValue)
+		}
+	}
+
+	var translationTargetLanguage: String {
+		get {
+			return AppDefaults.string(for: Key.translationTargetLanguage) ?? "Simplified Chinese"
+		}
+		set {
+			AppDefaults.setString(for: Key.translationTargetLanguage, newValue)
+		}
+	}
+
+	var translationParagraphsPerRequest: Int {
+		get {
+			let rawValue = AppDefaults.int(for: Key.translationParagraphsPerRequest)
+			return rawValue > 0 ? rawValue : 8
+		}
+		set {
+			AppDefaults.setInt(for: Key.translationParagraphsPerRequest, newValue)
 		}
 	}
 
