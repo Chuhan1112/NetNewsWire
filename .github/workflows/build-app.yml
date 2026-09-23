@@ -36,6 +36,11 @@ jobs:
           # re-signs the Share Extension with ${EXPANDED_CODE_SIGN_IDENTITY}, which is
           # empty under the no-signing config this job uses, so Release cannot complete
           # in CI without a real signing identity.
+          #
+          # Warnings are errors in this project, and the Debug config fails any function
+          # that takes more than 800ms to type-check. On a runner slower than a local
+          # Mac an upstream function crosses that line, so this artifact build does not
+          # treat warnings as errors. The CI workflow still enforces them.
           xcodebuild \
             -project NetNewsWire.xcodeproj \
             -scheme NetNewsWire \
@@ -43,6 +48,7 @@ jobs:
             -xcconfig .github/macos-ci-no-signing.xcconfig \
             -destination "platform=macOS,arch=arm64" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
             build
 
       - name: Ad-hoc sign
