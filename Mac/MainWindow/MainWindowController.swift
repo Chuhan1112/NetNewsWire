@@ -49,7 +49,9 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 	private static let defaultColumnLayoutTimelineHeightFraction: CGFloat = 0.4
 	private static let sidebarHoldingPriority: Float = 260
 	private static let timelineHoldingPriority: Float = 255
-	private static let toolbarIdentifier = "MainWindowToolbar"
+	// The toolbar autosaves its configuration, so bumping this identifier is what makes a
+	// newly added default item appear for someone upgrading to this build.
+	private static let toolbarIdentifier = "MainWindowToolbar-translation"
 	private var splitViewController: NSSplitViewController?
 	// Column layout only: the vertical split holding the timeline above the article view.
 	private var contentSplitViewController: NSSplitViewController?
