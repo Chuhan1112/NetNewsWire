@@ -84,32 +84,30 @@ public struct HTMLBlockScanner: Sendable {
 			let name = tagName(from: isClosing ? String(tagBody.dropFirst()) : tagBody)
 
 			if !isClosing, translatableTags.contains(name),
-			   let closeRange = matchingCloseTagRange(in: html, from: afterTag, name: name) {
+			   let boundary = blockBoundary(in: html, from: afterTag, name: name) {
 
-				let innerHTML = String(html[afterTag..<closeRange.lowerBound])
-				let closeTag = String(html[closeRange])
+				let innerHTML = String(html[afterTag..<boundary.innerEnd])
 				flushPending()
 
 				if containsTranslatableText(innerHTML) {
-					blocks.append(.translatable(TranslatableBlock(id: nextID, openTag: rawTag, closeTag: closeTag, innerHTML: innerHTML)))
+					blocks.append(.translatable(TranslatableBlock(id: nextID, openTag: rawTag, closeTag: boundary.closeTag, innerHTML: innerHTML)))
 					nextID += 1
 				} else {
 					// Image-only and whitespace-only paragraphs cost a request and gain nothing.
-					blocks.append(.passthrough(rawTag + innerHTML + closeTag))
+					blocks.append(.passthrough(rawTag + innerHTML + boundary.closeTag))
 				}
 
-				index = html.index(after: closeRange.upperBound)
+				index = boundary.resume
 				continue
 			}
 
 			if !isClosing, opaqueTags.contains(name),
-			   let closeRange = matchingCloseTagRange(in: html, from: afterTag, name: name) {
+			   let boundary = blockBoundary(in: html, from: afterTag, name: name) {
 
-				let innerHTML = String(html[afterTag..<closeRange.lowerBound])
-				let closeTag = String(html[closeRange])
+				let innerHTML = String(html[afterTag..<boundary.innerEnd])
 				flushPending()
-				blocks.append(.passthrough(rawTag + innerHTML + closeTag))
-				index = html.index(after: closeRange.upperBound)
+				blocks.append(.passthrough(rawTag + innerHTML + boundary.closeTag))
+				index = boundary.resume
 				continue
 			}
 
@@ -185,8 +183,40 @@ public struct HTMLBlockScanner: Sendable {
 	}
 
 	/// Finds the close tag matching an open tag, tolerating nested tags of the same name.
-	private static func matchingCloseTagRange(in html: String, from start: String.Index, name: String) -> ClosedRange<String.Index>? {
+	private struct BlockBoundary {
+		let innerEnd: String.Index
+		let closeTag: String
+		let resume: String.Index
+	}
 
+	/// Tags whose end tag may be omitted. Feeds really do this: inessential.com sends
+	/// thirty-one `<p>` opens and not one `</p>`, which left the entire article
+	/// untranslatable because no closed block could be found.
+	///
+	/// Only `<p>` is listed. HTML allows omitting other end tags too, but the rules
+	/// differ per element (`<li>` is closed by another `<li>`, not by a nested `<ul>`),
+	/// and guessing wrong merges or splits content that was fine to begin with.
+	private static let tagsClosedByNextBlock: Set<String> = ["p"]
+
+	/// Block-level elements that implicitly close an open `<p>`.
+	private static let closesParagraph: Set<String> = [
+		"p", "address", "article", "aside", "blockquote", "div", "dl", "fieldset",
+		"figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5",
+		"h6", "header", "hgroup", "hr", "li", "main", "menu", "nav", "ol", "pre",
+		"section", "table", "ul", "td", "th", "dt", "dd", "caption", "summary"
+	]
+
+	/// Closing tags that end an open `<p>` even though the paragraph never closed.
+	private static let blockLevelClosingTags: Set<String> = closesParagraph.union([
+		"tr", "thead", "tbody", "tfoot"
+	])
+
+	/// Where a block's content ends. An explicit close tag wins. When the end tag is
+	/// omitted, which HTML allows for `<p>`, the block ends where the next block-level
+	/// element starts, where an enclosing block ends, or at the end of the document.
+	private static func blockBoundary(in html: String, from start: String.Index, name: String) -> BlockBoundary? {
+
+		let allowsOmittedEndTag = tagsClosedByNextBlock.contains(name)
 		var depth = 0
 		var index = start
 
@@ -204,17 +234,32 @@ public struct HTMLBlockScanner: Sendable {
 			if tagName == name {
 				if isClosing {
 					if depth == 0 {
-						return index...tagEnd
+						return BlockBoundary(innerEnd: index, closeTag: String(html[index...tagEnd]), resume: html.index(after: tagEnd))
 					}
 					depth -= 1
 				} else if !voidTags.contains(tagName), !tagBody.hasSuffix("/") {
+					if depth == 0, allowsOmittedEndTag {
+						return BlockBoundary(innerEnd: index, closeTag: "", resume: index)
+					}
 					depth += 1
+				}
+			} else if allowsOmittedEndTag {
+				if isClosing, blockLevelClosingTags.contains(tagName) {
+					return BlockBoundary(innerEnd: index, closeTag: "", resume: index)
+				}
+				if !isClosing, depth == 0, closesParagraph.contains(tagName) {
+					return BlockBoundary(innerEnd: index, closeTag: "", resume: index)
 				}
 			}
 
 			index = html.index(after: tagEnd)
 		}
 
-		return nil
+		// Only a tag allowed to omit its end tag runs to the end of the document;
+		// everything else keeps the previous behavior of being left alone.
+		guard allowsOmittedEndTag else {
+			return nil
+		}
+		return BlockBoundary(innerEnd: html.endIndex, closeTag: "", resume: html.endIndex)
 	}
 }

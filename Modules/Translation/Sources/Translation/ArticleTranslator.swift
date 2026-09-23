@@ -36,6 +36,14 @@ public struct ArticleTranslator: Sendable {
 		let targets = HTMLBlockScanner.translatableInnerHTML(in: blocks)
 		let translator = self.translator
 
+		// Feeds that supply only plain text have no markup to split into blocks, so
+		// translate the body as one paragraph instead of leaving it untouched.
+		if targets.isEmpty, !bodyHTML.isEmpty, !bodyHTML.contains("<") {
+			let translatedBody = try await translator.translate([bodyHTML])
+			let translatedTitle = try await Self.translateTitle(title, translator: translator)
+			return ArticleTranslation(title: translatedTitle.first, bodyHTML: translatedBody.first ?? bodyHTML)
+		}
+
 		async let translatedTitle = Self.translateTitle(title, translator: translator)
 		async let translatedParts = translator.translate(targets.map { $0.innerHTML })
 
