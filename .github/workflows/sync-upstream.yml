@@ -1,0 +1,137 @@
+name: Sync upstream
+
+on:
+  schedule:
+    # Daily at 06:00 UTC (14:00 in Shanghai).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  sync:
+    name: Merge upstream main
+    runs-on: macos-26
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/Ranchero-Software/NetNewsWire.git
+          git fetch upstream main
+          git fetch origin main
+
+      - name: Check for new upstream commits
+        id: check
+        run: |
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "main already contains upstream/main — nothing to sync."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            git log --oneline HEAD..upstream/main | head -20
+          fi
+
+      - name: Merge upstream
+        id: merge
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          set -uo pipefail
+          if git merge --no-edit upstream/main; then
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+            echo "conflicted=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > "$RUNNER_TEMP/conflicts.txt" || true
+            git merge --abort
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            echo "conflicted=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A merge that does not compile must not land on main, so the merged tree is
+      # built before anything is pushed.
+      - name: Verify the merge builds
+        id: build
+        if: steps.merge.outputs.merged == 'true'
+        env:
+          PROJECT_DIR: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          ./buildscripts/updateSecrets.sh
+          if xcodebuild \
+            -project NetNewsWire.xcodeproj \
+            -scheme NetNewsWire \
+            -configuration Debug \
+            -xcconfig .github/macos-ci-no-signing.xcconfig \
+            -destination "platform=macOS,arch=arm64" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
+            build > "$RUNNER_TEMP/merge-build.log" 2>&1; then
+            echo "builds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "builds=false" >> "$GITHUB_OUTPUT"
+            grep -E "error:|The following build commands failed" "$RUNNER_TEMP/merge-build.log" | head -20 || true
+          fi
+
+      - name: Push the sync
+        if: steps.merge.outputs.merged == 'true' && steps.build.outputs.builds == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git push origin main
+          git push --force-with-lease origin HEAD:feature/local-model-translation
+          # Pushes made with GITHUB_TOKEN do not trigger other workflows, so ask the
+          # build to run explicitly and refresh the release.
+          gh workflow run build-app.yml --ref main
+
+      - name: Report a merge that does not build
+        if: steps.merge.outputs.merged == 'true' && steps.build.outputs.builds == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          title="Upstream sync does not build"
+          body=$(printf '%s\n' \
+            "Upstream main merged cleanly but the result does not compile, so \`main\` was left untouched." \
+            "" \
+            "Errors:" \
+            '```' \
+            "$(grep -E "error:|The following build commands failed" "$RUNNER_TEMP/merge-build.log" | head -20 || echo "(no error lines matched)")" \
+            '```')
+          gh issue create --title "$title" --body "$body"
+          exit 1
+
+      - name: Report merge conflicts
+        if: steps.merge.outputs.conflicted == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          title="Upstream sync needs a manual merge"
+          body=$(printf '%s\n' \
+            "Merging upstream main into \`main\` conflicts on:" \
+            "" \
+            '```' \
+            "$(cat "$RUNNER_TEMP/conflicts.txt")" \
+            '```' \
+            "" \
+            "Nothing was pushed. Resolve it locally, or rerun once upstream settles.")
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+          exit 1

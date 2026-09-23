@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-macos:
@@ -72,3 +72,24 @@ jobs:
           path: ${{ runner.temp }}/NetNewsWire-macos.zip
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          # One rolling release that every build refreshes, so the download link
+          # stays stable instead of piling up a release per commit.
+          tag_name: latest-build
+          name: Latest build
+          make_latest: true
+          prune: true
+          files: ${{ runner.temp }}/NetNewsWire-macos.zip
+          body: |
+            Automatic build of `main` at ${{ github.sha }}.
+
+            This fork adds local-model translation on top of NetNewsWire: any
+            OpenAI-compatible endpoint (oMLX, LM Studio, Ollama), automatic or manual
+            translation, and timeline headline translation.
+
+            The app is arm64, ad-hoc signed and not notarized, so the first launch
+            needs right-click → Open. Its bundle identifier ends in `-DEBUG`, so it
+            keeps its own feed database instead of sharing the release app's.
