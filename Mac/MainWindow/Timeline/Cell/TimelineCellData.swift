@@ -26,10 +26,25 @@ import Images
 	let read: Bool
 	let starred: Bool
 
-	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool) {
+	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, translatedTitle: String? = nil) {
 
-		self.title = ArticleStringFormatter.shared.truncatedTitle(article)
-		self.attributedTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
+		// A translated title replaces the original in the timeline; the summary
+		// stays in the feed's language, since translating it would cost another
+		// request for text the cell may not even show.
+		let originalTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
+		if let translatedTitle {
+			// Swap the characters but keep the original attributed runs: the title
+			// field sizer force-unwraps the font attribute at index 0, and the cell
+			// merges its base font into existing runs only, so a plain string with
+			// no font attribute crashes the layout.
+			let translated = NSMutableAttributedString(attributedString: originalTitle)
+			translated.replaceCharacters(in: NSRange(location: 0, length: originalTitle.length), with: translatedTitle)
+			self.attributedTitle = translated
+			self.title = translatedTitle
+		} else {
+			self.attributedTitle = originalTitle
+			self.title = ArticleStringFormatter.shared.truncatedTitle(article)
+		}
 		self.text = Self.summaryText(for: article, title: self.title)
 
 		self.dateString = ArticleStringFormatter.shared.dateString(article.logicalDatePublished)

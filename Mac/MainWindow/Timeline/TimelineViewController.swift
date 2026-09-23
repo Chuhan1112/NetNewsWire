@@ -128,11 +128,12 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 			}
 
 			if articles.representSameArticlesInSameOrder(as: oldValue) {
-				// When the array is the same — same articles, same order —
+				// When the array is the same — same articles, same order —
 				// but some data in some of the articles may have changed.
-				// Just reload visible cells in this case: don’t call reloadData.
+				// Just reload visible cells in this case: don't call reloadData.
 				articleRowMap = [String: [Int]]()
 				reloadVisibleCells()
+				requestTitleTranslations()
 				return
 			}
 
@@ -151,6 +152,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 
 			articleRowMap = [String: [Int]]()
 			tableView.reloadData()
+			requestTitleTranslations()
 			IconImageCache.shared.prefetchImagesForArticles(articles)
 		}
 	}
@@ -775,6 +777,12 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 
 	@MainActor func userDefaultsDidChange() {
 		fontSize = AppDefaults.shared.timelineFontSize
+		// Translation preferences live in UserDefaults too; when they change, the
+		// cached titles are stale and the visible rows need to be retranslated.
+		if TimelineTitleTranslator.shared.fingerprintChanged() {
+			reloadVisibleCells()
+		}
+		requestTitleTranslations()
 	}
 
 	/// The one place the row height is set — it depends on the layout and the font size.
@@ -1009,7 +1017,15 @@ extension TimelineViewController: NSTableViewDelegate {
 	private func configureTimelineCell(_ cell: TimelineTableCellView, article: Article) {
 		cell.objectValue = article
 		let iconImage = article.iconImage()
-		cell.cellData = TimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcons)
+		cell.cellData = TimelineCellData(
+			article: article,
+			showFeedName: showFeedNames,
+			feedName: article.feed?.nameForDisplay,
+			byline: article.byline(),
+			iconImage: iconImage,
+			showIcon: showIcons,
+			translatedTitle: TimelineTitleTranslator.shared.cachedTitle(for: article)
+		)
 	}
 
 	private func iconFor(_ article: Article) -> IconImage? {
@@ -1026,6 +1042,22 @@ extension TimelineViewController: NSTableViewDelegate {
 	private func makeTimelineCellEmpty(_ cell: TimelineTableCellView) {
 		cell.objectValue = nil
 		cell.cellData = TimelineCellData()
+	}
+
+	// MARK: - Title Translation
+
+	private func requestTitleTranslations() {
+
+		guard TranslationSettings.isEnabled, !articles.isEmpty else {
+			return
+		}
+
+		TimelineTitleTranslator.shared.requestTranslations(for: articles) { [weak self] translatedTitles in
+			guard let self, !translatedTitles.isEmpty else {
+				return
+			}
+			self.reloadVisibleCells(for: Set(translatedTitles.keys))
+		}
 	}
 
 	private func toggleArticleRead(_ article: Article) {
