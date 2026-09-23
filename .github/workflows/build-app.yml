@@ -89,6 +89,15 @@ jobs:
             OpenAI-compatible endpoint (oMLX, LM Studio, Ollama), automatic or manual
             translation, and timeline headline translation.
 
-            The app is arm64, ad-hoc signed and not notarized, so the first launch
-            needs right-click → Open. Its bundle identifier ends in `-DEBUG`, so it
-            keeps its own feed database instead of sharing the release app's.
+            Build notes:
+            - arm64, ad-hoc signed and not notarized, so the first launch needs
+              right-click → Open.
+            - Built in the Debug configuration, which defines
+              `SKIP_APP_GROUP_ACCESS`, so the app runs unsandboxed and keeps its
+              library in `~/Library/Application Support/NetNewsWire` — the same
+              place other unsandboxed (debug) builds use. It opens with whatever
+              feeds are already there and never touches the signed release app's
+              sandbox container.
+            - That library is a real one, so back it up before large upstream
+              merges. The Sync upstream workflow refuses to merge upstream code
+              that does not compile.
