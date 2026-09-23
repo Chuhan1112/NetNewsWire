@@ -14,6 +14,12 @@ import Translation
 		AppDefaults.shared.translationEnabled
 	}
 
+	/// True when titles and the open article translate as they appear; false means
+	/// translation happens only through the toolbar's Translate button.
+	static var isAutomatic: Bool {
+		AppDefaults.shared.translationAutomatically
+	}
+
 	static var targetLanguage: String {
 		AppDefaults.shared.translationTargetLanguage
 	}

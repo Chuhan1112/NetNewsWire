@@ -18,6 +18,7 @@ import Translation
 
 	private struct Fingerprint: Equatable {
 		var enabled: Bool
+		var automatic: Bool
 		var language: String
 		var model: String
 	}
@@ -31,6 +32,7 @@ import Translation
 	private static func currentFingerprint() -> Fingerprint {
 		Fingerprint(
 			enabled: TranslationSettings.isEnabled,
+			automatic: TranslationSettings.isAutomatic,
 			language: TranslationSettings.targetLanguage,
 			model: AppDefaults.shared.translationModel
 		)
@@ -49,7 +51,7 @@ import Translation
 	func requestTranslations(for articles: [Article], completion: @escaping ([String: String]) -> Void) {
 
 		syncFingerprint()
-		guard TranslationSettings.isEnabled else {
+		guard TranslationSettings.isEnabled, TranslationSettings.isAutomatic else {
 			return
 		}
 

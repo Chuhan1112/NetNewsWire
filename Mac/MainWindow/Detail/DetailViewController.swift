@@ -94,6 +94,8 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 				statusBarView.statusText = nil
 			}
 		}
+
+		requestArticleTranslationIfNeeded()
 	}
 
 	func showDetail(for mode: TimelineSourceMode) {
@@ -146,13 +148,23 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	}
 
 	@objc func toggleArticleTranslation(_ sender: Any?) {
+		translateDisplayedArticle(userInitiated: true)
+	}
+
+	/// Translates the article currently shown in the detail pane. The automatic
+	/// path (`userInitiated: false`) is silent on error and a no-op when the
+	/// article is already translated, so scrolling never spams alerts or
+	/// re-requests a translation that is already on screen.
+	func translateDisplayedArticle(userInitiated: Bool) {
 
 		guard TranslationSettings.isEnabled, let article = displayedArticle else {
 			return
 		}
 
 		if translatedArticleID == article.articleID {
-			clearTranslation()
+			if userInitiated {
+				clearTranslation()
+			}
 			return
 		}
 
@@ -179,11 +191,22 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 				webViewController(for: mode).translatedArticle = translation
 				statusBarView.statusText = nil
 			} catch {
-				statusBarView.statusText = nil
-				presentTranslationError(error)
+				statusBarView.statusText = userInitiated
+					? nil
+					: NSLocalizedString("Translation unavailable", comment: "Automatic translation failed")
+				if userInitiated {
+					presentTranslationError(error)
+				}
 			}
 			isTranslatingArticle = false
 		}
+	}
+
+	private func requestArticleTranslationIfNeeded() {
+		guard TranslationSettings.isAutomatic else {
+			return
+		}
+		translateDisplayedArticle(userInitiated: false)
 	}
 }
 

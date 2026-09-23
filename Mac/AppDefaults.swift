@@ -50,6 +50,7 @@ final class AppDefaults: Sendable {
 		static let translationModel = "translationModel"
 		static let translationTargetLanguage = "translationTargetLanguage"
 		static let translationParagraphsPerRequest = "translationParagraphsPerRequest"
+		static let translationAutomatically = "translationAutomatically"
 
 		// Hidden prefs
 		static let showDebugMenu = "ShowDebugMenu"
@@ -280,6 +281,17 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setInt(for: Key.translationParagraphsPerRequest, newValue)
+		}
+	}
+
+	/// When true, timeline titles and the open article translate as they appear;
+	/// when false, only the toolbar Translate button translates, on demand.
+	var translationAutomatically: Bool {
+		get {
+			return AppDefaults.bool(for: Key.translationAutomatically)
+		}
+		set {
+			AppDefaults.setBool(for: Key.translationAutomatically, newValue)
 		}
 	}
 

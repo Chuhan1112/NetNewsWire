@@ -23,6 +23,10 @@ import SwiftUI
 		didSet { AppDefaults.shared.translationEnabled = isEnabled }
 	}
 
+	@Published var automatically: Bool {
+		didSet { AppDefaults.shared.translationAutomatically = automatically }
+	}
+
 	@Published var endpoint: String {
 		didSet { AppDefaults.shared.translationEndpoint = endpoint }
 	}
@@ -49,6 +53,7 @@ import SwiftUI
 
 	init() {
 		self.isEnabled = AppDefaults.shared.translationEnabled
+		self.automatically = AppDefaults.shared.translationAutomatically
 		self.endpoint = AppDefaults.shared.translationEndpoint
 		self.apiKey = AppDefaults.shared.translationAPIKey
 		self.model = AppDefaults.shared.translationModel
@@ -96,6 +101,9 @@ struct TranslationPreferencesView: View {
 		VStack(alignment: .leading, spacing: 18) {
 
 			Toggle("Enable translation", isOn: $model.isEnabled)
+
+			Toggle("Translate titles and articles automatically", isOn: $model.automatically)
+				.disabled(!model.isEnabled)
 
 			VStack(alignment: .leading, spacing: 12) {
 
