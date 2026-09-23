@@ -43,12 +43,12 @@ final class PreferencesWindowController: NSWindowController, NSToolbarDelegate {
 		specs += [PreferencesToolbarItemSpec(identifierRawValue: ToolbarItemIdentifier.Advanced,
 											 name: NSLocalizedString("Advanced", comment: "Preferences"),
 											 image: Assets.Images.preferencesToolbarAdvanced)]
-		return specs
 
 		let translationName = NSLocalizedString("Translation", comment: "Preferences")
 		specs += [PreferencesToolbarItemSpec(identifierRawValue: ToolbarItemIdentifier.Translation,
 											 name: translationName,
 											 image: NSImage(systemSymbolName: "translate", accessibilityDescription: translationName))]
+		return specs
 	}()
 
 	convenience init() {

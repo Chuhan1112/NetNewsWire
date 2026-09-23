@@ -132,50 +132,6 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		}
 		window.makeFirstResponderUnlessDescendantIsFirstResponder(currentWebViewController.webView)
 	}
-}
-
-// MARK: - DetailWebViewControllerDelegate
-
-extension DetailViewController: DetailWebViewControllerDelegate {
-
-	func mouseDidEnter(_ detailWebViewController: DetailWebViewController, link: String) {
-		guard !link.isEmpty, detailWebViewController === currentWebViewController else {
-			return
-		}
-		statusBarView.mouseoverLink = link
-	}
-
-	func mouseDidExit(_ detailWebViewController: DetailWebViewController) {
-		guard detailWebViewController === currentWebViewController else {
-			return
-		}
-		statusBarView.mouseoverLink = nil
-	}
-}
-
-// MARK: - Private
-
-private extension DetailViewController {
-
-	func createWebViewController() -> DetailWebViewController {
-		let controller = DetailWebViewController()
-		controller.delegate = self
-		controller.state = .noSelection
-		return controller
-	}
-
-	func webViewController(for mode: TimelineSourceMode) -> DetailWebViewController {
-		switch mode {
-		case .regular:
-			return regularWebViewController
-		case .search:
-			if searchWebViewController == nil {
-				searchWebViewController = createWebViewController()
-			}
-			return searchWebViewController!
-		}
-	}
-
 	// MARK: - Translation
 
 	var canTranslateArticle: Bool {
@@ -227,6 +183,49 @@ private extension DetailViewController {
 				presentTranslationError(error)
 			}
 			isTranslatingArticle = false
+		}
+	}
+}
+
+// MARK: - DetailWebViewControllerDelegate
+
+extension DetailViewController: DetailWebViewControllerDelegate {
+
+	func mouseDidEnter(_ detailWebViewController: DetailWebViewController, link: String) {
+		guard !link.isEmpty, detailWebViewController === currentWebViewController else {
+			return
+		}
+		statusBarView.mouseoverLink = link
+	}
+
+	func mouseDidExit(_ detailWebViewController: DetailWebViewController) {
+		guard detailWebViewController === currentWebViewController else {
+			return
+		}
+		statusBarView.mouseoverLink = nil
+	}
+}
+
+// MARK: - Private
+
+private extension DetailViewController {
+
+	func createWebViewController() -> DetailWebViewController {
+		let controller = DetailWebViewController()
+		controller.delegate = self
+		controller.state = .noSelection
+		return controller
+	}
+
+	func webViewController(for mode: TimelineSourceMode) -> DetailWebViewController {
+		switch mode {
+		case .regular:
+			return regularWebViewController
+		case .search:
+			if searchWebViewController == nil {
+				searchWebViewController = createWebViewController()
+			}
+			return searchWebViewController!
 		}
 	}
 
