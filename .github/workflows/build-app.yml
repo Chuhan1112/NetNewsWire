@@ -51,6 +51,18 @@ jobs:
             SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
             build
 
+      - name: Point the updater away from the official appcast
+        run: |
+          set -euo pipefail
+          info="$RUNNER_TEMP/DerivedData/Build/Products/Debug/NetNewsWire.app/Contents/Info.plist"
+          # The project ships an SUFeedURL pointing at ranchero.com, so Sparkle would
+          # happily replace this build with the official NetNewsWire and take the
+          # translation feature with it. These URLs are not appcasts, so update checks
+          # fail harmlessly instead. Both keys stay strings because the Advanced
+          # preferences pane force-unwraps them.
+          /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://github.com/${{ github.repository }}/releases" "$info"
+          /usr/libexec/PlistBuddy -c "Set :FeedURLForTestBuilds https://github.com/${{ github.repository }}/releases/beta" "$info"
+
       - name: Ad-hoc sign
         run: |
           app="$RUNNER_TEMP/DerivedData/Build/Products/Debug/NetNewsWire.app"
@@ -101,3 +113,7 @@ jobs:
             - That library is a real one, so back it up before large upstream
               merges. The Sync upstream workflow refuses to merge upstream code
               that does not compile.
+            - The updater is pointed away from the official appcast, so this build
+              can never silently replace itself with the official NetNewsWire and
+              drop the translation feature. Update checks therefore fail; replace
+              the app by downloading a newer build here instead.
