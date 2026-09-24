@@ -85,17 +85,27 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Name this build
+        id: label
+        run: |
+          short="${GITHUB_SHA:0:7}"
+          stamp="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "name=Latest build - ${short} - ${stamp}" >> "$GITHUB_OUTPUT"
+          echo "stamp=${stamp}" >> "$GITHUB_OUTPUT"
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           # One rolling release that every build refreshes, so the download link
           # stays stable instead of piling up a release per commit.
           tag_name: latest-build
-          name: Latest build
+          # GitHub keeps the original publish date when a release is updated, and it
+          # never shows asset timestamps, so the title carries the build identity.
+          name: ${{ steps.label.outputs.name }}
           make_latest: true
           files: ${{ runner.temp }}/NetNewsWire-macos.zip
           body: |
-            Automatic build of `main` at ${{ github.sha }}.
+            Automatic build of `main` at ${{ github.sha }}, built ${{ steps.label.outputs.stamp }}.
 
             This fork adds local-model translation on top of NetNewsWire: any
             OpenAI-compatible endpoint (oMLX, LM Studio, Ollama), automatic or manual
