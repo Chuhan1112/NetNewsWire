@@ -93,6 +93,12 @@ struct AddAccountsView: View {
 			// inside CKContainer(identifier:) without iCloud entitlements.
 			if !AppDefaults.shared.isDeveloperBuild && CloudKitAccountAvailability.isAvailable {
 				icloudAccount
+			} else if !CloudKitAccountAvailability.isAvailable {
+				// Say why the option is missing instead of leaving a puzzle.
+				Text("iCloud sync isn’t available in this build, which has no iCloud signing identity.")
+					.font(.footnote)
+					.foregroundStyle(.secondary)
+					.padding(.horizontal)
 			}
 
 			webAccounts
