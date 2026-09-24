@@ -42,6 +42,13 @@ final class AccountsAddCloudKitWindowController: NSWindowController {
 	@IBAction func create(_ sender: Any) {
 		assert(!AccountManager.shared.hasiCloudAccount)
 
+		// Belt and braces: the account sheet hides iCloud when this build has no iCloud
+		// entitlements, but creating one anyway would trap inside CKContainer.
+		guard CloudKitAccountAvailability.isAvailable else {
+			presentError(AddCloudKitAccountError.iCloudUnavailableInThisBuild)
+			return
+		}
+
 		guard AddCloudKitAccountUtilities.isiCloudDriveEnabled else {
 			presentError(AddCloudKitAccountError.iCloudDriveMissing)
 			return

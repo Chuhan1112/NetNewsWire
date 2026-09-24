@@ -127,3 +127,6 @@ jobs:
               can never silently replace itself with the official NetNewsWire and
               drop the translation feature. Update checks therefore fail; replace
               the app by downloading a newer build here instead.
+            - iCloud is not available here: without a signing identity the app has no
+              iCloud entitlements, and CloudKit traps instead of failing gracefully,
+              so the account sheet hides that option in this build.

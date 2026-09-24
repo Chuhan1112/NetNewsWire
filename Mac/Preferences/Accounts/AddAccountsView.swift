@@ -89,7 +89,9 @@ struct AddAccountsView: View {
 
 			localAccount
 
-			if !AppDefaults.shared.isDeveloperBuild {
+			// Only offer iCloud when this build can actually use it: CloudKit traps
+			// inside CKContainer(identifier:) without iCloud entitlements.
+			if !AppDefaults.shared.isDeveloperBuild && CloudKitAccountAvailability.isAvailable {
 				icloudAccount
 			}
 

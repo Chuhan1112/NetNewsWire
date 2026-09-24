@@ -17,37 +17,56 @@ import RSCore
 
 enum AddCloudKitAccountError: LocalizedError, RecoverableError, Sendable {
 	case iCloudDriveMissing
+	case iCloudUnavailableInThisBuild
 
 	var errorDescription: String? {
-		NSLocalizedString("Can’t Add iCloud Account", comment: "CloudKit account setup failure description — iCloud Drive not enabled.")
+		switch self {
+		case .iCloudDriveMissing, .iCloudUnavailableInThisBuild:
+			return NSLocalizedString("Can’t Add iCloud Account", comment: "CloudKit account setup failure description — iCloud Drive not enabled.")
+		}
 	}
 
 	var recoverySuggestion: String? {
-		#if os(macOS)
-		NSLocalizedString("Open System Settings to configure iCloud and enable iCloud Drive.", comment: "CloudKit account setup recovery suggestion")
-		#else
-		NSLocalizedString("Open Settings to configure iCloud and enable iCloud Drive.", comment: "CloudKit account setup recovery suggestion")
-		#endif
+		switch self {
+		case .iCloudDriveMissing:
+			#if os(macOS)
+			return NSLocalizedString("Open System Settings to configure iCloud and enable iCloud Drive.", comment: "CloudKit account setup recovery suggestion")
+			#else
+			return NSLocalizedString("Open Settings to configure iCloud and enable iCloud Drive.", comment: "CloudKit account setup recovery suggestion")
+			#endif
+		case .iCloudUnavailableInThisBuild:
+			return NSLocalizedString("This build was made without an iCloud signing identity, so iCloud sync is not available in it. A build signed with an iCloud container can sync.", comment: "CloudKit account setup recovery suggestion for unsigned builds")
+		}
 	}
 
 	var recoveryOptions: [String] {
-		#if os(macOS)
-		[NSLocalizedString("Open System Settings", comment: "Open System Settings button"), NSLocalizedString("Cancel", comment: "Cancel button")]
-		#else
-		[NSLocalizedString("Open Settings", comment: "Open Settings button"), NSLocalizedString("Cancel", comment: "Cancel button")]
-		#endif
+		switch self {
+		case .iCloudDriveMissing:
+			#if os(macOS)
+			return [NSLocalizedString("Open System Settings", comment: "Open System Settings button"), NSLocalizedString("Cancel", comment: "Cancel button")]
+			#else
+			return [NSLocalizedString("Open Settings", comment: "Open Settings button"), NSLocalizedString("Cancel", comment: "Cancel button")]
+			#endif
+		case .iCloudUnavailableInThisBuild:
+			return [NSLocalizedString("OK", comment: "OK button")]
+		}
 	}
 
 	func attemptRecovery(optionIndex recoveryOptionIndex: Int) -> Bool {
-		guard recoveryOptionIndex == 0 else {
+		switch self {
+		case .iCloudUnavailableInThisBuild:
 			return false
-		}
+		case .iCloudDriveMissing:
+			guard recoveryOptionIndex == 0 else {
+				return false
+			}
 
-		Task { @MainActor in
-			AddCloudKitAccountUtilities.openiCloudSettings()
-		}
+			Task { @MainActor in
+				AddCloudKitAccountUtilities.openiCloudSettings()
+			}
 
-		return true
+			return true
+		}
 	}
 }
 
