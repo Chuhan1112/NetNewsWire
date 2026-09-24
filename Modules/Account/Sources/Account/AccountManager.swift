@@ -628,6 +628,13 @@ private extension AccountManager {
 	func loadAccount(_ filename: String) -> Account? {
 		let folderPath = (accountsFolder as NSString).appendingPathComponent(filename)
 		if let accountSpecifier = AccountSpecifier(folderPath: folderPath) {
+			// Constructing a CloudKit account without iCloud entitlements traps inside
+			// CKContainer, and a leftover account folder would then make the app
+			// unlaunchable. Skip it instead of crashing.
+			guard accountSpecifier.type != .cloudKit || CloudKitAccountAvailability.isAvailable else {
+				Self.logger.warning("Skipping CloudKit account \(accountSpecifier.folderName, privacy: .public): this build has no iCloud entitlement.")
+				return nil
+			}
 			return loadAccount(accountSpecifier)
 		}
 		return nil
