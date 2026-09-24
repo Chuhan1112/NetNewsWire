@@ -96,10 +96,18 @@ jobs:
         run: |
           set -euo pipefail
           git push origin main
-          git push --force-with-lease origin HEAD:feature/local-model-translation
           # Pushes made with GITHUB_TOKEN do not trigger other workflows, so ask the
-          # build to run explicitly and refresh the release.
+          # build to run explicitly and refresh the release. This happens before the
+          # mirror branch below so that a mirror failure cannot skip the build.
           gh workflow run build-app.yml --ref main
+          # --force-with-lease needs a remote-tracking ref to compare against, which
+          # this run does not have until it fetches the branch.
+          if git fetch --no-tags origin feature/local-model-translation; then
+            git push --force-with-lease origin HEAD:feature/local-model-translation \
+              || echo "mirror branch update skipped"
+          else
+            echo "mirror branch not present; skipping"
+          fi
 
       - name: Report a merge that does not build
         if: steps.merge.outputs.merged == 'true' && steps.build.outputs.builds == 'false'
