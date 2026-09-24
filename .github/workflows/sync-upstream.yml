@@ -100,10 +100,13 @@ jobs:
           # build to run explicitly and refresh the release. This happens before the
           # mirror branch below so that a mirror failure cannot skip the build.
           gh workflow run build-app.yml --ref main
-          # --force-with-lease needs a remote-tracking ref to compare against, which
-          # this run does not have until it fetches the branch.
-          if git fetch --no-tags origin feature/local-model-translation; then
-            git push --force-with-lease origin HEAD:feature/local-model-translation \
+          # This branch is a mirror of main, so a force push is the right semantic.
+          # --force-with-lease cannot be used here: a fetch with an explicit refspec
+          # does not create the remote-tracking ref it needs to compare against, and
+          # it then rejects the push with "stale info" — which is how the first run
+          # failed. Failures are tolerated so the build dispatch above still counts.
+          if git ls-remote --exit-code --heads origin feature/local-model-translation > /dev/null; then
+            git push --force origin HEAD:feature/local-model-translation \
               || echo "mirror branch update skipped"
           else
             echo "mirror branch not present; skipping"
